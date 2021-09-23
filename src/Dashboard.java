@@ -10,7 +10,7 @@ public class Dashboard extends Node{
 
     public static void main(String[] args){
         try{
-            (new Dashboard("localhost", 50002, 50001)).start();
+            (new Dashboard("localhost", 50001, 50003)).start();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -28,7 +28,9 @@ public class Dashboard extends Node{
     }
 
     public synchronized void start() throws InterruptedException {
-        this.wait();
+        while(true) {
+            this.wait();
+        }
     }
 
     @Override

@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
@@ -18,7 +19,7 @@ public abstract class Node {
     }
 
 
-    public abstract void onReceipt(DatagramPacket packet);
+    public abstract void onReceipt(DatagramPacket packet) throws IOException;
 
     /**
      *
