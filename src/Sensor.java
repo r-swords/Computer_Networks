@@ -11,6 +11,7 @@ public class Sensor extends Node {
 
     Terminal terminal;
     InetSocketAddress dstAddress;
+    String sensorName;
 
     Sensor(String dstHost, int dstPort, int srcPort){
         try {
@@ -25,12 +26,14 @@ public class Sensor extends Node {
     }
 
     public synchronized void publishMessage(String message) throws IOException {
-        DatagramPacket datagramPacket = new DatagramPacket(
-                message.getBytes(StandardCharsets.UTF_8), message.length(), dstAddress);
+        DatagramPacket datagramPacket = createPacket(MESSAGE, message, dstAddress);
         socket.send(datagramPacket);
     }
 
-    public synchronized void start() throws IOException {
+    public synchronized void start() throws IOException, InterruptedException {
+        sensorName = terminal.read("Enter sensor name: ");
+        DatagramPacket initialisePacket = createPacket(INITIALISE_SENSOR, sensorName, dstAddress);
+        socket.send(initialisePacket);
         while(true){
             String message = terminal.read("Enter message: ");
             terminal.println("Enter message: " + message);
@@ -46,7 +49,7 @@ public class Sensor extends Node {
     public static void main(String[] args){
         try{
             (new Sensor("localhost", 50001, 50002)).start();
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
