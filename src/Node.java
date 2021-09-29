@@ -25,6 +25,13 @@ public abstract class Node {
         listener.start();
     }
 
+    public String getMessage(DatagramPacket packet){
+        byte[] messageArray = new byte[packet.getData().length];
+        System.arraycopy(packet.getData(), 6, messageArray, 0,
+                packet.getData().length-6);
+        return new String(messageArray).trim();
+    }
+
     public DatagramPacket createPacket(int type, String message, InetSocketAddress dstAddress){
         byte[] data = new byte[PACKETSIZE];
         data[0] = (byte) type;
