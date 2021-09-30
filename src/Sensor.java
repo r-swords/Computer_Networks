@@ -25,25 +25,34 @@ public class Sensor extends Node {
 
     }
 
-    public synchronized void publishMessage(String message) throws IOException {
-        DatagramPacket datagramPacket = createPacket(MESSAGE, message, dstAddress);
-        socket.send(datagramPacket);
-    }
-
-    public synchronized void start() throws IOException, InterruptedException {
-        sensorName = terminal.read("Enter sensor name: ");
-        DatagramPacket initialisePacket = createPacket(INITIALISE_SENSOR, sensorName, dstAddress);
-        socket.send(initialisePacket);
-        while(true){
+    public synchronized void publishMessage() throws IOException {
+        while(true) {
             String message = terminal.read("Enter message: ");
             terminal.println("Enter message: " + message);
-            publishMessage(message);
+            DatagramPacket datagramPacket = createPacket(MESSAGE, message, dstAddress);
+            socket.send(datagramPacket);
         }
     }
 
+    public synchronized void initialiseSensor() throws IOException {
+        sensorName = terminal.read("Enter sensor name: ");
+        DatagramPacket initialisePacket = createPacket(INITIALISE_SENSOR, sensorName, dstAddress);
+        socket.send(initialisePacket);
+    }
+
+    public synchronized void start() throws IOException, InterruptedException {
+        initialiseSensor();
+    }
+
     @Override
-    public synchronized void onReceipt(DatagramPacket packet) {
-        terminal.println("recieved");
+    public synchronized void onReceipt(DatagramPacket packet) throws IOException {
+        byte[] message = packet.getData();
+        String printMessage = new String(message).trim();
+        if(printMessage.equals("true")){
+            terminal.println("Sensor added.");
+            publishMessage();
+        }
+        else terminal.println("Sensor name already exists.");
     }
 
     public static void main(String[] args){

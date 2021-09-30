@@ -38,8 +38,15 @@ public class Broker extends Node {
         String message = getMessage(packet);
         String sensorName = sensorNames.get((InetSocketAddress) packet.getSocketAddress());
         ArrayList<InetSocketAddress> list = sensorSubscriptions.get(sensorName);
-        DatagramPacket sendPacket = new DatagramPacket(
-                message.getBytes(StandardCharsets.UTF_8), message.length(), list.get(0));
+        if(list.size() > 0) {
+            DatagramPacket sendPacket = new DatagramPacket(
+                    message.getBytes(StandardCharsets.UTF_8), message.length(), list.get(0));
+            socket.send(sendPacket);
+        }
+    }
+
+    public synchronized void sendMessage(String message, InetSocketAddress dstAddress) throws IOException {
+        DatagramPacket sendPacket = new DatagramPacket(message.getBytes(StandardCharsets.UTF_8), message.length(), dstAddress);
         socket.send(sendPacket);
     }
 
@@ -48,15 +55,22 @@ public class Broker extends Node {
         switch (packet.getData()[0]){
             case INITIALISE_SENSOR:
                 String sensorName = getMessage(packet);
-                sensorNames.put((InetSocketAddress) packet.getSocketAddress(), sensorName);
-                ArrayList<InetSocketAddress> subscriberList = new ArrayList<>();
-                sensorSubscriptions.put(sensorName, subscriberList);
+                if(!sensorSubscriptions.containsKey(sensorName)) {
+                    sensorNames.put((InetSocketAddress) packet.getSocketAddress(), sensorName);
+                    ArrayList<InetSocketAddress> subscriberList = new ArrayList<>();
+                    sensorSubscriptions.put(sensorName, subscriberList);
+                    sendMessage("true", (InetSocketAddress) packet.getSocketAddress());
+                }
+                else sendMessage("false", (InetSocketAddress) packet.getSocketAddress());
                 break;
             case SUBSCRIBE:
                 String topicName = getMessage(packet);
-                ArrayList<InetSocketAddress> list = sensorSubscriptions.get(topicName);
-                list.add((InetSocketAddress) packet.getSocketAddress());
-                sensorSubscriptions.put(topicName,list);
+                if(sensorSubscriptions.containsKey(topicName)) {
+                    ArrayList<InetSocketAddress> list = sensorSubscriptions.get(topicName);
+                    list.add((InetSocketAddress) packet.getSocketAddress());
+                    sensorSubscriptions.put(topicName, list);
+                }
+                else sendMessage("fALSE", (InetSocketAddress) packet.getSocketAddress());
                 break;
             case MESSAGE:
                 sendMessage(packet);

@@ -40,6 +40,9 @@ public class Dashboard extends Node{
     public synchronized void onReceipt(DatagramPacket packet) {
         byte[] message = packet.getData();
         String printMessage = new String(message).trim();
-        terminal.println(printMessage);
+        if(!printMessage.equals("fALSE")) {
+            terminal.println(printMessage);
+        }
+        else terminal.println("Sensor doesn't exist");
     }
 }
