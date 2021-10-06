@@ -30,8 +30,11 @@ public class Dashboard extends Node{
 
     public void start() throws InterruptedException, IOException {
         while(true) {
-            String topic = terminal.read("Subscribe to sensor: ");
-            DatagramPacket newSubscription = createPacket(SUBSCRIBE, topic, dstAddress);
+            String topic = terminal.read("Subscribe to topic, " +
+                    "subscription requests should be in the form of '<Topic> <Sub-Topic' : ");
+            terminal.println("Subscribe to topic, subscription requests should be in the form of " +
+                    "'<Topic> <Sub-Topic' : " + topic);
+            DatagramPacket newSubscription = createPacket(SUBSCRIBE, topic, dstAddress, -1);
             socket.send(newSubscription);
         }
     }
@@ -43,6 +46,6 @@ public class Dashboard extends Node{
         if(!printMessage.equals("fALSE")) {
             terminal.println(printMessage);
         }
-        else terminal.println("Sensor doesn't exist");
+        else terminal.println("Topic doesn't exist");
     }
 }

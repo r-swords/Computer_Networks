@@ -6,17 +6,16 @@ import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 
 public class Broker extends Node {
     Terminal terminal;
-    HashMap<String, ArrayList<InetSocketAddress>> sensorSubscriptions;
-    HashMap<InetSocketAddress, String> sensorNames;
+    HashMap<String, Topic> topicSubscriptions;
+    HashMap<InetSocketAddress, String> topicNames;
     InetSocketAddress dstAddress;
 
     Broker (String dstHost, int dstPort, int srcPort){
-        sensorSubscriptions = new HashMap<String, ArrayList<InetSocketAddress>>();
-        sensorNames = new HashMap<InetSocketAddress, String>();
+        topicSubscriptions = new HashMap<>();
+        topicNames = new HashMap<>();
         try {
             terminal = new Terminal("Broker");
             socket = new DatagramSocket(srcPort);
@@ -36,11 +35,12 @@ public class Broker extends Node {
 
     public synchronized void sendMessage(DatagramPacket packet) throws IOException {
         String message = getMessage(packet);
-        String sensorName = sensorNames.get((InetSocketAddress) packet.getSocketAddress());
-        ArrayList<InetSocketAddress> list = sensorSubscriptions.get(sensorName);
-        if(list.size() > 0) {
+        String topicName = topicNames.get((InetSocketAddress) packet.getSocketAddress());
+        Topic topic = topicSubscriptions.get(topicName);
+        ArrayList<InetSocketAddress> list = topic.getSubscriberList(getTopicNumber(packet) - 1);
+        for(int i = 0; i < list.size(); i++){
             DatagramPacket sendPacket = new DatagramPacket(
-                    message.getBytes(StandardCharsets.UTF_8), message.length(), list.get(0));
+                    message.getBytes(StandardCharsets.UTF_8), message.length(), list.get(i));
             socket.send(sendPacket);
         }
     }
@@ -55,27 +55,35 @@ public class Broker extends Node {
         switch (packet.getData()[0]){
             case INITIALISE_SENSOR:
                 String sensorName = getMessage(packet);
-                if(!sensorSubscriptions.containsKey(sensorName)) {
-                    sensorNames.put((InetSocketAddress) packet.getSocketAddress(), sensorName);
-                    ArrayList<InetSocketAddress> subscriberList = new ArrayList<>();
-                    sensorSubscriptions.put(sensorName, subscriberList);
+                if(!topicSubscriptions.containsKey(sensorName)) {
+                    topicNames.put((InetSocketAddress) packet.getSocketAddress(), sensorName);
+                    Topic newTopic = new Topic();
+                    topicSubscriptions.put(sensorName, newTopic);
                     sendMessage("true", (InetSocketAddress) packet.getSocketAddress());
                 }
                 else sendMessage("false", (InetSocketAddress) packet.getSocketAddress());
                 break;
             case SUBSCRIBE:
-                String topicName = getMessage(packet);
-                if(sensorSubscriptions.containsKey(topicName)) {
-                    ArrayList<InetSocketAddress> list = sensorSubscriptions.get(topicName);
-                    list.add((InetSocketAddress) packet.getSocketAddress());
-                    sensorSubscriptions.put(topicName, list);
+                String message = getMessage(packet);
+                String[] messageArray = message.split(" ");
+                if(topicSubscriptions.containsKey(messageArray[0])) {
+                    Topic list = topicSubscriptions.get(messageArray[0]);
+                    if(list.addSubscriber(messageArray[1], (InetSocketAddress) packet.getSocketAddress())) {
+                        topicSubscriptions.put(messageArray[0], list);
+                    }
+                    else sendMessage("fALSE", (InetSocketAddress) packet.getSocketAddress());
                 }
                 else sendMessage("fALSE", (InetSocketAddress) packet.getSocketAddress());
                 break;
             case MESSAGE:
                 sendMessage(packet);
+                break;
+            case CREATE_SUBTOPIC:
+                String topicName = topicNames.get((InetSocketAddress) packet.getSocketAddress());
+                Topic topic = topicSubscriptions.get(topicName);
+                topic.addTopic(getMessage(packet));
         }
-        terminal.println("Recieved message");
+        terminal.println("Received message");
     }
 
     public static void main(String[] args){

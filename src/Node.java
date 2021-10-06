@@ -13,6 +13,7 @@ public abstract class Node {
     static final byte INITIALISE_SENSOR = 1;
     static final byte MESSAGE = 2;
     static final byte SUBSCRIBE = 3;
+    static final byte CREATE_SUBTOPIC = 4;
 
     DatagramSocket socket;
     Listener listener;
@@ -27,19 +28,26 @@ public abstract class Node {
 
     public String getMessage(DatagramPacket packet){
         byte[] messageArray = new byte[packet.getData().length];
-        System.arraycopy(packet.getData(), 6, messageArray, 0,
-                packet.getData().length-6);
+        System.arraycopy(packet.getData(), 10, messageArray, 0,
+                packet.getData().length-10);
         return new String(messageArray).trim();
     }
+    public int getTopicNumber(DatagramPacket packet){
+        byte[] topicNumberArray = new byte[4];
+        System.arraycopy(packet.getData(), 1, topicNumberArray, 0, 4);
+        return ByteBuffer.wrap(topicNumberArray).getInt();
+    }
 
-    public DatagramPacket createPacket(int type, String message, InetSocketAddress dstAddress){
+    public DatagramPacket createPacket(int type, String message, InetSocketAddress dstAddress, int subTopicNumber){
         byte[] data = new byte[PACKETSIZE];
         data[0] = (byte) type;
+        byte[] subTopic = ByteBuffer.allocate(4).putInt(subTopicNumber).array();
+        System.arraycopy(subTopic,0,data,1, subTopic.length);
         ByteBuffer buffer = ByteBuffer.allocate(5);
         byte[] bufferArray = buffer.array();
-        System.arraycopy(bufferArray, 0, data, 1, bufferArray.length);
+        System.arraycopy(bufferArray, 0, data, 5, bufferArray.length);
         byte[] messageArray = message.getBytes(StandardCharsets.UTF_8);
-        System.arraycopy(messageArray, 0, data, 6, messageArray.length);
+        System.arraycopy(messageArray, 0, data, 10, messageArray.length);
         return new DatagramPacket(data, data.length, dstAddress);
     }
 
