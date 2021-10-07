@@ -35,6 +35,13 @@ public class Topic {
         else return false;
     }
 
+    public void addSubscriber(InetSocketAddress newSub) {
+        for(ArrayList<InetSocketAddress> i : subTopics){
+            i.add(newSub);
+        }
+        allSubscribers.add(newSub);
+    }
+
     public ArrayList<InetSocketAddress> getAll(){
         return allSubscribers;
     }

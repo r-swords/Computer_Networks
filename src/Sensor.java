@@ -34,10 +34,15 @@ public class Sensor extends Node {
                 "publish to all sub-topics: ");
         terminal.println("Enter sub-topic name, or 'ALL' to publish to all sub-topics: " + subTopic);
         int subNumber;
-        if(subTopicMap.containsKey(subTopic)) {
+        String message = terminal.read("Enter Message: ");
+        terminal.println("Enter message: " + message);
+        if(subTopic.equalsIgnoreCase("ALL")){
+            subNumber = 0;
+            DatagramPacket datagramPacket = createPacket(MESSAGE, message, dstAddress, subNumber);
+            socket.send(datagramPacket);
+        }
+        else if(subTopicMap.containsKey(subTopic)) {
             subNumber = subTopicMap.get(subTopic);
-            String message = terminal.read("Enter Message: ");
-            terminal.println("Enter message: " + message);
             DatagramPacket datagramPacket = createPacket(MESSAGE, message, dstAddress, subNumber);
             socket.send(datagramPacket);
         }

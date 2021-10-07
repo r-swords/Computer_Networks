@@ -37,10 +37,11 @@ public class Broker extends Node {
         String message = getMessage(packet);
         String topicName = topicNames.get((InetSocketAddress) packet.getSocketAddress());
         Topic topic = topicSubscriptions.get(topicName);
-        ArrayList<InetSocketAddress> list = topic.getSubscriberList(getTopicNumber(packet) - 1);
-        for(int i = 0; i < list.size(); i++){
+        ArrayList<InetSocketAddress> list = (getTopicNumber(packet) != 0)?
+                topic.getSubscriberList(getTopicNumber(packet) - 1): topic.getAll();
+        for (InetSocketAddress inetSocketAddress : list) {
             DatagramPacket sendPacket = new DatagramPacket(
-                    message.getBytes(StandardCharsets.UTF_8), message.length(), list.get(i));
+                    message.getBytes(StandardCharsets.UTF_8), message.length(), inetSocketAddress);
             socket.send(sendPacket);
         }
     }
@@ -50,30 +51,43 @@ public class Broker extends Node {
         socket.send(sendPacket);
     }
 
+    public synchronized void initialiseTopic(DatagramPacket packet) throws IOException {
+        String sensorName = getMessage(packet);
+        if(!topicSubscriptions.containsKey(sensorName)) {
+            topicNames.put((InetSocketAddress) packet.getSocketAddress(), sensorName);
+            Topic newTopic = new Topic();
+            topicSubscriptions.put(sensorName, newTopic);
+            sendMessage("true", (InetSocketAddress) packet.getSocketAddress());
+        }
+        else sendMessage("false", (InetSocketAddress) packet.getSocketAddress());
+    }
+
+    public synchronized  void subscribe(DatagramPacket packet) throws IOException {
+        String message = getMessage(packet);
+        String[] messageArray = message.split(" ");
+        if(topicSubscriptions.containsKey(messageArray[0])) {
+            Topic list = topicSubscriptions.get(messageArray[0]);
+            if(messageArray.length == 2) {
+                if (list.addSubscriber(messageArray[1], (InetSocketAddress) packet.getSocketAddress())) {
+                    topicSubscriptions.put(messageArray[0], list);
+                } else sendMessage("fALSE", (InetSocketAddress) packet.getSocketAddress());
+            }
+            else if(messageArray.length == 1) {
+                list.addSubscriber((InetSocketAddress) packet.getSocketAddress());
+            }
+        }
+        else sendMessage("fALSE", (InetSocketAddress) packet.getSocketAddress());
+    }
+
+
     @Override
     public void onReceipt(DatagramPacket packet) throws IOException {
         switch (packet.getData()[0]){
             case INITIALISE_SENSOR:
-                String sensorName = getMessage(packet);
-                if(!topicSubscriptions.containsKey(sensorName)) {
-                    topicNames.put((InetSocketAddress) packet.getSocketAddress(), sensorName);
-                    Topic newTopic = new Topic();
-                    topicSubscriptions.put(sensorName, newTopic);
-                    sendMessage("true", (InetSocketAddress) packet.getSocketAddress());
-                }
-                else sendMessage("false", (InetSocketAddress) packet.getSocketAddress());
+                initialiseTopic(packet);
                 break;
             case SUBSCRIBE:
-                String message = getMessage(packet);
-                String[] messageArray = message.split(" ");
-                if(topicSubscriptions.containsKey(messageArray[0])) {
-                    Topic list = topicSubscriptions.get(messageArray[0]);
-                    if(list.addSubscriber(messageArray[1], (InetSocketAddress) packet.getSocketAddress())) {
-                        topicSubscriptions.put(messageArray[0], list);
-                    }
-                    else sendMessage("fALSE", (InetSocketAddress) packet.getSocketAddress());
-                }
-                else sendMessage("fALSE", (InetSocketAddress) packet.getSocketAddress());
+                subscribe(packet);
                 break;
             case MESSAGE:
                 sendMessage(packet);
