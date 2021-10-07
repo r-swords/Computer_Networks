@@ -44,13 +44,14 @@ public class Sensor extends Node {
         else terminal.println("sub-topic does not exist");
     }
 
-    public synchronized void initialiseSensor() throws IOException {
+    public synchronized void initialiseSensor() throws IOException, InterruptedException {
         sensorName = terminal.read("Enter sensor name: ");
         DatagramPacket initialisePacket = createPacket(INITIALISE_SENSOR, sensorName, dstAddress, -1);
         socket.send(initialisePacket);
+        this.wait();
     }
 
-    public void runner() throws IOException, InterruptedException {
+    public synchronized void runner() throws IOException {
         while(true) {
             String action = terminal.read("Enter 'CREATE' to create a sub-topic, " +
                     "or 'PUBLISH' to publish a message: ");
@@ -76,14 +77,14 @@ public class Sensor extends Node {
 
 
     @Override
-    public synchronized void onReceipt(DatagramPacket packet) throws IOException {
+    public synchronized void onReceipt(DatagramPacket packet) {
         byte[] message = packet.getData();
         String printMessage = new String(message).trim();
         if(printMessage.equals("true")){
             terminal.println("Sensor added.");
-            publishMessage();
         }
         else terminal.println("Sensor name already exists.");
+        notifyAll();
     }
 
     public static void main(String[] args){
