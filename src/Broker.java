@@ -62,22 +62,31 @@ public class Broker extends Node {
         else sendMessage("false", (InetSocketAddress) packet.getSocketAddress());
     }
 
-    public synchronized  void subscribe(DatagramPacket packet) throws IOException {
+    public synchronized  void subscribe(DatagramPacket packet, boolean isSubscription) throws IOException {
         String message = getMessage(packet);
         String[] messageArray = message.split(" ");
         if(topicSubscriptions.containsKey(messageArray[0])) {
             Topic list = topicSubscriptions.get(messageArray[0]);
             if(messageArray.length == 2) {
-                if (list.addSubscriber(messageArray[1], (InetSocketAddress) packet.getSocketAddress())) {
+                if(isSubscription) {
+                    if (list.addSubscriber(messageArray[1], (InetSocketAddress) packet.getSocketAddress())) {
+                        topicSubscriptions.put(messageArray[0], list);
+                    } else sendMessage("fALSE", (InetSocketAddress) packet.getSocketAddress());
+                }
+                else{
+                    list.removeSubscriber(messageArray[1], (InetSocketAddress) packet.getSocketAddress());
                     topicSubscriptions.put(messageArray[0], list);
-                } else sendMessage("fALSE", (InetSocketAddress) packet.getSocketAddress());
+                }
             }
             else if(messageArray.length == 1) {
-                list.addSubscriber((InetSocketAddress) packet.getSocketAddress());
+                if(isSubscription)list.addSubscriber((InetSocketAddress) packet.getSocketAddress());
+                else list.removeSubscriber((InetSocketAddress) packet.getSocketAddress());
             }
         }
         else sendMessage("fALSE", (InetSocketAddress) packet.getSocketAddress());
     }
+
+
 
 
     @Override
@@ -87,7 +96,7 @@ public class Broker extends Node {
                 initialiseTopic(packet);
                 break;
             case SUBSCRIBE:
-                subscribe(packet);
+                subscribe(packet, true);
                 break;
             case MESSAGE:
                 sendMessage(packet);
@@ -96,6 +105,9 @@ public class Broker extends Node {
                 String topicName = topicNames.get((InetSocketAddress) packet.getSocketAddress());
                 Topic topic = topicSubscriptions.get(topicName);
                 topic.addTopic(getMessage(packet));
+                break;
+            case UNSUBSCRIBE:
+                subscribe(packet, false);
         }
         terminal.println("Received message");
     }

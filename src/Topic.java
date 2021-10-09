@@ -27,9 +27,9 @@ public class Topic {
         if(topNumbers.containsKey(name)) {
             int topicNo = topNumbers.get(name);
             ArrayList<InetSocketAddress> subscribers = subTopics.get(topicNo);
-            subscribers.add(newSub);
+            if(!subscribers.contains(newSub)) subscribers.add(newSub);
             subTopics.set(topicNo, subscribers);
-            allSubscribers.add(newSub);
+            if(!allSubscribers.contains(newSub)) allSubscribers.add(newSub);
             return true;
         }
         else return false;
@@ -37,9 +37,25 @@ public class Topic {
 
     public void addSubscriber(InetSocketAddress newSub) {
         for(ArrayList<InetSocketAddress> i : subTopics){
-            i.add(newSub);
+            if(!i.contains(newSub))i.add(newSub);
         }
-        allSubscribers.add(newSub);
+        if(!allSubscribers.contains(newSub))allSubscribers.add(newSub);
+    }
+
+    public void removeSubscriber(String name, InetSocketAddress removeSubscriber){
+        if(topNumbers.containsKey(name)){
+            int topNo = topNumbers.get(name);
+            ArrayList<InetSocketAddress> subscribers = subTopics.get(topNo);
+            subscribers.remove(removeSubscriber);
+            subTopics.set(topNo, subscribers);
+        }
+    }
+
+    public void removeSubscriber(InetSocketAddress removeSubscriber) {
+        for(ArrayList<InetSocketAddress> i : subTopics){
+            i.remove(removeSubscriber);
+        }
+        allSubscribers.remove(removeSubscriber);
     }
 
     public ArrayList<InetSocketAddress> getAll(){

@@ -30,12 +30,25 @@ public class Dashboard extends Node{
 
     public void start() throws InterruptedException, IOException {
         while(true) {
-            String topic = terminal.read("Subscribe to topic, " +
-                    "subscription requests should be in the form of '<Topic> <Sub-Topic' : ");
-            terminal.println("Subscribe to topic, subscription requests should be in the form of " +
-                    "'<Topic> <Sub-Topic' : " + topic);
-            DatagramPacket newSubscription = createPacket(SUBSCRIBE, topic, dstAddress, -1);
-            socket.send(newSubscription);
+            String action = terminal.read("Enter 'SUBSCRIBE' or 'UNSUBSCRIBE': ");
+            terminal.println("Enter 'SUBSCRIBE' or 'UNSUBSCRIBE': " + action);
+            if(action.equalsIgnoreCase("SUBSCRIBE")) {
+                String topic = terminal.read("Subscribe to topic, " +
+                        "subscription requests should be in the form of '<Topic> <Sub-Topic>': ");
+                terminal.println("Subscribe to topic, subscription requests should be in the form of " +
+                        "'<Topic> <Sub-Topic>' : " + topic);
+                DatagramPacket newSubscription = createPacket(SUBSCRIBE, topic, dstAddress, -1);
+                socket.send(newSubscription);
+            }
+            else if(action.equalsIgnoreCase("UNSUBSCRIBE")){
+                String topic =  terminal.read("Unsubscribe to Topic, " +
+                        "unsubscription requests should be in the form of '<Topic> <Sub-Topic>': ");
+                terminal.println("Unsubscribe to topic, " +
+                        "unsubscription requests should be in the form of '<Topic> <Sub-Topic>': " + topic);
+                DatagramPacket unsubscribe = createPacket(UNSUBSCRIBE, topic, dstAddress, -1);
+                socket.send(unsubscribe);
+            }
+            else terminal.println("Invalid input.");
         }
     }
 
