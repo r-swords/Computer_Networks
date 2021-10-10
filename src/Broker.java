@@ -46,6 +46,20 @@ public class Broker extends Node {
         }
     }
 
+    public synchronized boolean getAuthorisation(String terminalPrompt){
+        boolean valid = false;
+        String response = "";
+        while(!valid){
+            response = terminal.read(terminalPrompt);
+            terminal.println(terminalPrompt + response);
+            if(response.equalsIgnoreCase("Y") || response.equalsIgnoreCase("N")){
+                valid = true;
+            }
+            else System.out.println("Invalid input");
+        }
+        return response.equalsIgnoreCase("Y");
+    }
+
     public synchronized void sendMessage(String message, InetSocketAddress dstAddress) throws IOException {
         DatagramPacket sendPacket = new DatagramPacket(message.getBytes(StandardCharsets.UTF_8), message.length(), dstAddress);
         socket.send(sendPacket);
@@ -53,39 +67,61 @@ public class Broker extends Node {
 
     public synchronized void initialiseTopic(DatagramPacket packet) throws IOException {
         String sensorName = getMessage(packet);
-        if(!topicSubscriptions.containsKey(sensorName)) {
-            topicNames.put((InetSocketAddress) packet.getSocketAddress(), sensorName);
-            Topic newTopic = new Topic();
-            topicSubscriptions.put(sensorName, newTopic);
-            sendMessage("true", (InetSocketAddress) packet.getSocketAddress());
+        String auth = "action successful";
+        if(getAuthorisation("Initialise publisher request from " + sensorName +" (y/n): ")) {
+            if (!topicSubscriptions.containsKey(sensorName)) {
+                topicNames.put((InetSocketAddress) packet.getSocketAddress(), sensorName);
+                Topic newTopic = new Topic();
+                topicSubscriptions.put(sensorName, newTopic);
+                sendMessage("true", (InetSocketAddress) packet.getSocketAddress());
+            } else sendMessage("false", (InetSocketAddress) packet.getSocketAddress());
         }
-        else sendMessage("false", (InetSocketAddress) packet.getSocketAddress());
+        else auth = "action rejected";
+        DatagramPacket newPacket = createPacket(AUTH, auth, (InetSocketAddress) packet.getSocketAddress(),
+                -1);
+        socket.send(newPacket);
     }
 
     public synchronized  void subscribe(DatagramPacket packet, boolean isSubscription) throws IOException {
         String message = getMessage(packet);
-        String[] messageArray = message.split(" ");
-        if(topicSubscriptions.containsKey(messageArray[0])) {
-            Topic list = topicSubscriptions.get(messageArray[0]);
-            if(messageArray.length == 2) {
-                if(isSubscription) {
-                    if (list.addSubscriber(messageArray[1], (InetSocketAddress) packet.getSocketAddress())) {
+        String auth = "action authorised";
+        if(getAuthorisation("Subscription request to " + message + " (y/n): ")) {
+            String[] messageArray = message.split(" ");
+            if (topicSubscriptions.containsKey(messageArray[0])) {
+                Topic list = topicSubscriptions.get(messageArray[0]);
+                if (messageArray.length == 2) {
+                    if (isSubscription) {
+                        if (list.addSubscriber(messageArray[1], (InetSocketAddress) packet.getSocketAddress())) {
+                            topicSubscriptions.put(messageArray[0], list);
+                        } else auth = "action rejected";
+                    } else {
+                        list.removeSubscriber(messageArray[1], (InetSocketAddress) packet.getSocketAddress());
                         topicSubscriptions.put(messageArray[0], list);
-                    } else sendMessage("fALSE", (InetSocketAddress) packet.getSocketAddress());
+                    }
+                } else if (messageArray.length == 1) {
+                    if (isSubscription) list.addSubscriber((InetSocketAddress) packet.getSocketAddress());
+                    else list.removeSubscriber((InetSocketAddress) packet.getSocketAddress());
                 }
-                else{
-                    list.removeSubscriber(messageArray[1], (InetSocketAddress) packet.getSocketAddress());
-                    topicSubscriptions.put(messageArray[0], list);
-                }
-            }
-            else if(messageArray.length == 1) {
-                if(isSubscription)list.addSubscriber((InetSocketAddress) packet.getSocketAddress());
-                else list.removeSubscriber((InetSocketAddress) packet.getSocketAddress());
-            }
+            } else auth = "action rejected";
         }
-        else sendMessage("fALSE", (InetSocketAddress) packet.getSocketAddress());
+        else auth = "action rejected";
+        DatagramPacket newPacket = createPacket(AUTH, auth, (InetSocketAddress) packet.getSocketAddress(),
+                -1);
+        socket.send(newPacket);
     }
 
+    public synchronized void createSubtopic(DatagramPacket packet) throws IOException {
+        String auth = "action accepted";
+        if(getAuthorisation("Request to create subtopic " + getMessage(packet))) {
+            String topicName = topicNames.get((InetSocketAddress) packet.getSocketAddress());
+            Topic topic = topicSubscriptions.get(topicName);
+            topic.addTopic(getMessage(packet));
+        }
+        else auth = "action rejected";
+        DatagramPacket newPacket = createPacket(AUTH, auth, (InetSocketAddress) packet.getSocketAddress(),
+                -1);
+        socket.send(newPacket);
+    }
 
 
 
@@ -102,9 +138,7 @@ public class Broker extends Node {
                 sendMessage(packet);
                 break;
             case CREATE_SUBTOPIC:
-                String topicName = topicNames.get((InetSocketAddress) packet.getSocketAddress());
-                Topic topic = topicSubscriptions.get(topicName);
-                topic.addTopic(getMessage(packet));
+                createSubtopic(packet);
                 break;
             case UNSUBSCRIBE:
                 subscribe(packet, false);

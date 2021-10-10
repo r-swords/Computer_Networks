@@ -15,6 +15,7 @@ public abstract class Node {
     static final byte SUBSCRIBE = 3;
     static final byte CREATE_SUBTOPIC = 4;
     static final byte UNSUBSCRIBE = 5;
+    static final byte AUTH = 6;
 
     DatagramSocket socket;
     Listener listener;

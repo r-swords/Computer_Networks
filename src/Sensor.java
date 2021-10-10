@@ -4,6 +4,7 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.util.HashMap;
+import java.util.Locale;
 
 
 public class Sensor extends Node {
@@ -56,7 +57,7 @@ public class Sensor extends Node {
         this.wait();
     }
 
-    public synchronized void runner() throws IOException {
+    public synchronized void runner() throws IOException, InterruptedException {
         while(true) {
             String action = terminal.read("Enter 'CREATE' to create a sub-topic, " +
                     "or 'PUBLISH' to publish a message: ");
@@ -68,6 +69,7 @@ public class Sensor extends Node {
                 subTopicMap.put(subTopicName, subTopicNumber);
                 DatagramPacket subTopicPacket = createPacket(CREATE_SUBTOPIC, subTopicName, dstAddress, subTopicNumber);
                 socket.send(subTopicPacket);
+                this.wait();
                 subTopicNumber++;
             } else if (action.equalsIgnoreCase("PUBLISH")) {
                 publishMessage();
@@ -84,11 +86,15 @@ public class Sensor extends Node {
     @Override
     public synchronized void onReceipt(DatagramPacket packet) {
         byte[] message = packet.getData();
-        String printMessage = new String(message).trim();
-        if(printMessage.equals("true")){
-            terminal.println("Sensor added.");
+        if(message[0] == AUTH) {
+            terminal.println(getMessage(packet).toUpperCase());
         }
-        else terminal.println("Sensor name already exists.");
+        else {
+            String printMessage = new String(message).trim();
+            if (printMessage.equals("true")) {
+                terminal.println("Sensor added.");
+            } else terminal.println("Sensor name already exists.");
+        }
         notifyAll();
     }
 

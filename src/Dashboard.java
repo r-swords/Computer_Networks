@@ -28,6 +28,10 @@ public class Dashboard extends Node{
         }
     }
 
+    public synchronized void waitForAuth() throws InterruptedException {
+        this.wait();
+    }
+
     public void start() throws InterruptedException, IOException {
         while(true) {
             String action = terminal.read("Enter 'SUBSCRIBE' or 'UNSUBSCRIBE': ");
@@ -39,6 +43,7 @@ public class Dashboard extends Node{
                         "'<Topic> <Sub-Topic>' : " + topic);
                 DatagramPacket newSubscription = createPacket(SUBSCRIBE, topic, dstAddress, -1);
                 socket.send(newSubscription);
+                waitForAuth();
             }
             else if(action.equalsIgnoreCase("UNSUBSCRIBE")){
                 String topic =  terminal.read("Unsubscribe to Topic, " +
@@ -47,6 +52,7 @@ public class Dashboard extends Node{
                         "unsubscription requests should be in the form of '<Topic> <Sub-Topic>': " + topic);
                 DatagramPacket unsubscribe = createPacket(UNSUBSCRIBE, topic, dstAddress, -1);
                 socket.send(unsubscribe);
+                waitForAuth();
             }
             else terminal.println("Invalid input.");
         }
@@ -55,10 +61,16 @@ public class Dashboard extends Node{
     @Override
     public synchronized void onReceipt(DatagramPacket packet) {
         byte[] message = packet.getData();
-        String printMessage = new String(message).trim();
-        if(!printMessage.equals("fALSE")) {
-            terminal.println(printMessage);
+        notifyAll();
+        if(packet.getData()[0] == AUTH){
+            if(getMessage(packet).equalsIgnoreCase("action rejected")) terminal.println("Action rejected");
+            else terminal.println("Action Accepted");
         }
-        else terminal.println("Topic doesn't exist");
+        else {
+            String printMessage = new String(message).trim();
+            if (!printMessage.equals("fALSE")) {
+                terminal.println(printMessage);
+            } else terminal.println("Topic doesn't exist");
+        }
     }
 }
