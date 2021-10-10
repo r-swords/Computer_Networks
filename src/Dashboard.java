@@ -28,8 +28,20 @@ public class Dashboard extends Node{
         }
     }
 
-    public synchronized void waitForAuth() throws InterruptedException {
-        this.wait();
+
+    public synchronized void sendSubscribeUnsubscribe(byte type, String topic) throws InterruptedException, IOException {
+        String[] sub = topic.split(" ");
+        if(sub.length == 2) {
+            DatagramPacket newSubscription = createPacket(type, "", dstAddress, sub[0], sub[1]);
+            socket.send(newSubscription);
+            this.wait();
+        }
+        else if(sub.length == 1) {
+            DatagramPacket newSubscription = createPacket(type, "", dstAddress, sub[0], "");
+            socket.send(newSubscription);
+            this.wait();
+        }
+        else terminal.println("Invalid input.");
     }
 
     public void start() throws InterruptedException, IOException {
@@ -41,18 +53,14 @@ public class Dashboard extends Node{
                         "subscription requests should be in the form of '<Topic> <Sub-Topic>': ");
                 terminal.println("Subscribe to topic, subscription requests should be in the form of " +
                         "'<Topic> <Sub-Topic>' : " + topic);
-                DatagramPacket newSubscription = createPacket(SUBSCRIBE, topic, dstAddress, -1);
-                socket.send(newSubscription);
-                waitForAuth();
+                sendSubscribeUnsubscribe(SUBSCRIBE, topic);
             }
             else if(action.equalsIgnoreCase("UNSUBSCRIBE")){
                 String topic =  terminal.read("Unsubscribe to Topic, " +
                         "unsubscription requests should be in the form of '<Topic> <Sub-Topic>': ");
                 terminal.println("Unsubscribe to topic, " +
                         "unsubscription requests should be in the form of '<Topic> <Sub-Topic>': " + topic);
-                DatagramPacket unsubscribe = createPacket(UNSUBSCRIBE, topic, dstAddress, -1);
-                socket.send(unsubscribe);
-                waitForAuth();
+                sendSubscribeUnsubscribe(UNSUBSCRIBE, topic);
             }
             else terminal.println("Invalid input.");
         }

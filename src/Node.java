@@ -30,27 +30,39 @@ public abstract class Node {
 
     public String getMessage(DatagramPacket packet){
         byte[] messageArray = new byte[packet.getData().length];
-        System.arraycopy(packet.getData(), 10, messageArray, 0,
-                packet.getData().length-10);
+        System.arraycopy(packet.getData(), 26, messageArray, 0,
+                packet.getData().length-26);
         return new String(messageArray).trim();
     }
-    public int getTopicNumber(DatagramPacket packet){
-        byte[] topicNumberArray = new byte[4];
-        System.arraycopy(packet.getData(), 1, topicNumberArray, 0, 4);
-        return ByteBuffer.wrap(topicNumberArray).getInt();
+
+    public String getTopic(DatagramPacket packet){
+        byte[] topicArray = new byte[10];
+        System.arraycopy(packet.getData(), 1, topicArray, 0, topicArray.length);
+        return new String(topicArray).trim();
     }
 
-    public DatagramPacket createPacket(int type, String message, InetSocketAddress dstAddress, int subTopicNumber){
-        byte[] data = new byte[PACKETSIZE];
-        data[0] = (byte) type;
-        byte[] subTopic = ByteBuffer.allocate(4).putInt(subTopicNumber).array();
-        System.arraycopy(subTopic,0,data,1, subTopic.length);
-        ByteBuffer buffer = ByteBuffer.allocate(5);
-        byte[] bufferArray = buffer.array();
-        System.arraycopy(bufferArray, 0, data, 5, bufferArray.length);
-        byte[] messageArray = message.getBytes(StandardCharsets.UTF_8);
-        System.arraycopy(messageArray, 0, data, 10, messageArray.length);
-        return new DatagramPacket(data, data.length, dstAddress);
+    public String getSubtopic(DatagramPacket packet) {
+        byte[] subtopic = new byte[10];
+        System.arraycopy(packet.getData(), 11, subtopic,0, subtopic.length);
+        return new String(subtopic).trim();
+    }
+
+    public DatagramPacket createPacket(byte type, String message, InetSocketAddress dstAddress, String topic, String subtopic){
+        if(subtopic.length() <= 10 && topic.length() <= 10) {
+            byte[] data = new byte[PACKETSIZE];
+            data[0] = type;
+            byte[] topicBytes = topic.getBytes();
+            System.arraycopy(topicBytes,0, data, 1, topicBytes.length);
+            byte[] subTopicBytes = subtopic.getBytes();
+            System.arraycopy(subTopicBytes,0, data, 11, subTopicBytes.length);
+            ByteBuffer buffer = ByteBuffer.allocate(5);
+            byte[] bufferArray = buffer.array();
+            System.arraycopy(bufferArray, 0, data, 21, bufferArray.length);
+            byte[] messageArray = message.getBytes(StandardCharsets.UTF_8);
+            System.arraycopy(messageArray, 0, data, 26, messageArray.length);
+            return new DatagramPacket(data, data.length, dstAddress);
+        }
+        return null;
     }
 
 

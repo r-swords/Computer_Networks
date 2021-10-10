@@ -3,32 +3,29 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Topic {
-    private ArrayList<ArrayList<InetSocketAddress>> subTopics;
     private ArrayList<InetSocketAddress> allSubscribers;
-    HashMap<String, Integer> topNumbers;
+    private HashMap<String, ArrayList<InetSocketAddress>> subTopics;
 
     Topic(){
-        subTopics = new ArrayList<>();
+        subTopics = new HashMap<>();
         allSubscribers = new ArrayList<>();
-        topNumbers = new HashMap<>();
     }
 
     public void addTopic(String name){
-        topNumbers.put(name, subTopics.size());
         ArrayList<InetSocketAddress> newList = new ArrayList<>();
-        subTopics.add(newList);
+        subTopics.put(name, newList);
     }
 
-    public ArrayList<InetSocketAddress> getSubscriberList(int topicNo){
-        return subTopics.get(topicNo);
+    public ArrayList<InetSocketAddress> getSubscriberList(String name){
+        ArrayList<InetSocketAddress> newList = subTopics.getOrDefault(name, null);
+        return subTopics.getOrDefault(name, null);
     }
 
     public boolean addSubscriber(String name, InetSocketAddress newSub){
-        if(topNumbers.containsKey(name)) {
-            int topicNo = topNumbers.get(name);
-            ArrayList<InetSocketAddress> subscribers = subTopics.get(topicNo);
+        if(subTopics.containsKey(name)) {
+            ArrayList<InetSocketAddress> subscribers = subTopics.get(name);
             if(!subscribers.contains(newSub)) subscribers.add(newSub);
-            subTopics.set(topicNo, subscribers);
+            subTopics.put(name, subscribers);
             if(!allSubscribers.contains(newSub)) allSubscribers.add(newSub);
             return true;
         }
@@ -36,23 +33,22 @@ public class Topic {
     }
 
     public void addSubscriber(InetSocketAddress newSub) {
-        for(ArrayList<InetSocketAddress> i : subTopics){
+        for(ArrayList<InetSocketAddress> i : subTopics.values()){
             if(!i.contains(newSub))i.add(newSub);
         }
         if(!allSubscribers.contains(newSub))allSubscribers.add(newSub);
     }
 
     public void removeSubscriber(String name, InetSocketAddress removeSubscriber){
-        if(topNumbers.containsKey(name)){
-            int topNo = topNumbers.get(name);
-            ArrayList<InetSocketAddress> subscribers = subTopics.get(topNo);
+        if(subTopics.containsKey(name)){
+            ArrayList<InetSocketAddress> subscribers = subTopics.get(name);
             subscribers.remove(removeSubscriber);
-            subTopics.set(topNo, subscribers);
+            subTopics.put(name, subscribers);
         }
     }
 
     public void removeSubscriber(InetSocketAddress removeSubscriber) {
-        for(ArrayList<InetSocketAddress> i : subTopics){
+        for(ArrayList<InetSocketAddress> i : subTopics.values()){
             i.remove(removeSubscriber);
         }
         allSubscribers.remove(removeSubscriber);

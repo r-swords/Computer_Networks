@@ -4,6 +4,7 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
 
 
@@ -12,18 +13,16 @@ public class Sensor extends Node {
     Terminal terminal;
     InetSocketAddress dstAddress;
     String sensorName;
-    int subTopicNumber;
-    HashMap<String, Integer> subTopicMap;
+    HashSet<String> subTopics;
+
 
     Sensor(String dstHost, int dstPort, int srcPort){
         try {
             terminal = new Terminal("Sensor");
             dstAddress= new InetSocketAddress(dstHost, dstPort);
             socket= new DatagramSocket(srcPort);
+            subTopics = new HashSet<>();
             listener.go();
-            subTopicNumber = 1;
-            subTopicMap = new HashMap<>();
-            subTopicMap.put("ALL", 0);
         } catch (SocketException e) {
             e.printStackTrace();
         }
@@ -34,17 +33,14 @@ public class Sensor extends Node {
         String subTopic = terminal.read("Enter sub-topic name, or 'ALL' to " +
                 "publish to all sub-topics: ");
         terminal.println("Enter sub-topic name, or 'ALL' to publish to all sub-topics: " + subTopic);
-        int subNumber;
         String message = terminal.read("Enter Message: ");
         terminal.println("Enter message: " + message);
         if(subTopic.equalsIgnoreCase("ALL")){
-            subNumber = 0;
-            DatagramPacket datagramPacket = createPacket(MESSAGE, message, dstAddress, subNumber);
+            DatagramPacket datagramPacket = createPacket(MESSAGE, message, dstAddress, sensorName, "");
             socket.send(datagramPacket);
         }
-        else if(subTopicMap.containsKey(subTopic)) {
-            subNumber = subTopicMap.get(subTopic);
-            DatagramPacket datagramPacket = createPacket(MESSAGE, message, dstAddress, subNumber);
+        else if(subTopics.contains(subTopic)) {
+            DatagramPacket datagramPacket = createPacket(MESSAGE, message, dstAddress, sensorName, subTopic);
             socket.send(datagramPacket);
         }
         else terminal.println("sub-topic does not exist");
@@ -52,11 +48,13 @@ public class Sensor extends Node {
 
     public synchronized void initialiseSensor() throws IOException, InterruptedException {
         sensorName = terminal.read("Enter sensor name: ");
-        DatagramPacket initialisePacket = createPacket(INITIALISE_SENSOR, sensorName, dstAddress, -1);
+        DatagramPacket initialisePacket = createPacket(INITIALISE_SENSOR, "", dstAddress,
+                sensorName, "");
         socket.send(initialisePacket);
         this.wait();
     }
-
+// TODO check if new subtopic exists
+// TODO only add subtopic to hash set if action successful
     public synchronized void runner() throws IOException, InterruptedException {
         while(true) {
             String action = terminal.read("Enter 'CREATE' to create a sub-topic, " +
@@ -66,11 +64,11 @@ public class Sensor extends Node {
             if (action.equalsIgnoreCase("CREATE")) {
                 String subTopicName = terminal.read("Enter the name of the new sub-topic: ");
                 terminal.println("Enter the name of the new sub-topic: " + subTopicName);
-                subTopicMap.put(subTopicName, subTopicNumber);
-                DatagramPacket subTopicPacket = createPacket(CREATE_SUBTOPIC, subTopicName, dstAddress, subTopicNumber);
+                DatagramPacket subTopicPacket = createPacket(CREATE_SUBTOPIC, "", dstAddress,
+                        sensorName, subTopicName);
                 socket.send(subTopicPacket);
                 this.wait();
-                subTopicNumber++;
+                subTopics.add(subTopicName);
             } else if (action.equalsIgnoreCase("PUBLISH")) {
                 publishMessage();
             }
