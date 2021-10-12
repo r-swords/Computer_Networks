@@ -13,7 +13,8 @@ public class Sensor extends Node {
     Terminal terminal;
     InetSocketAddress dstAddress;
     String sensorName;
-    HashSet<String> subTopics;
+    HashSet<String> subtopics;
+    HashSet<String> groups;
 
 
     Sensor(String dstHost, int dstPort, int srcPort){
@@ -21,7 +22,8 @@ public class Sensor extends Node {
             terminal = new Terminal("Sensor");
             dstAddress= new InetSocketAddress(dstHost, dstPort);
             socket= new DatagramSocket(srcPort);
-            subTopics = new HashSet<>();
+            subtopics = new HashSet<>();
+            groups = new HashSet<>();
             listener.go();
         } catch (SocketException e) {
             e.printStackTrace();
@@ -30,48 +32,104 @@ public class Sensor extends Node {
     }
 
     public synchronized void publishMessage() throws IOException {
-        String subTopic = terminal.read("Enter sub-topic name, or 'ALL' to " +
-                "publish to all sub-topics: ");
-        terminal.println("Enter sub-topic name, or 'ALL' to publish to all sub-topics: " + subTopic);
         String message = terminal.read("Enter Message: ");
+        String selection = terminal.read("Enter 'SUBTOPIC' to select a sub-topic, 'GROUP' to " +
+                "select a group, or 'ALL' to publish to all sub-topics: ");
+        terminal.println("Enter SUBTOPIC' to select a sub-topic, 'GROUP' to select a group, or 'ALL' " +
+                "to publish to all sub-topics: " + selection);
         terminal.println("Enter message: " + message);
-        if(subTopic.equalsIgnoreCase("ALL")){
-            DatagramPacket datagramPacket = createPacket(MESSAGE, message, dstAddress, sensorName, "");
+        if(selection.equalsIgnoreCase("ALL")){
+            DatagramPacket datagramPacket = createPacket(MESSAGE, message, dstAddress, sensorName,
+                    "", "");
             socket.send(datagramPacket);
         }
-        else if(subTopics.contains(subTopic)) {
-            DatagramPacket datagramPacket = createPacket(MESSAGE, message, dstAddress, sensorName, subTopic);
-            socket.send(datagramPacket);
+        else if(selection.equalsIgnoreCase("SUBTOPIC")) {
+            String subtopic = terminal.read("Enter sub-topic name: ");
+            terminal.println("Enter sub-topic name: " + subtopic);
+            if(subtopics.contains(subtopic)) {
+                DatagramPacket datagramPacket = createPacket(MESSAGE, message, dstAddress, sensorName,
+                        subtopic, "");
+                socket.send(datagramPacket);
+            }
+            else terminal.println("Sub-topic does not exist.");
         }
-        else terminal.println("sub-topic does not exist");
+        else if(selection.equalsIgnoreCase("GROUP")){
+            String group = terminal.read("Enter group name: ");
+            terminal.println("Enter group name: " + group);
+            if(groups.contains(group)) {
+                DatagramPacket datagramPacket = createPacket(MESSAGE, message, dstAddress, sensorName,
+                        "", group);
+                socket.send(datagramPacket);
+            }
+            else terminal.println("Group does not exist.");
+        }
+        else terminal.println("Invalid input");
+    }
+
+    public synchronized void create() throws IOException, InterruptedException {
+        String action = terminal.read("Enter 'GROUP' to create a group, or 'SUBTOPIC' to create a " +
+                "sub-topic: ");
+        terminal.println("Enter 'GROUP' to create a group, or 'SUBTOPIC' to create a sub-topic: " + action);
+        if(action.equalsIgnoreCase("SUBTOPIC")) {
+            String subTopicName = terminal.read("Enter the name of the new sub-topic: ");
+            terminal.println("Enter the name of the new sub-topic: " + subTopicName);
+            DatagramPacket subTopicPacket = createPacket(CREATE_SUBTOPIC, "", dstAddress,
+                    sensorName, subTopicName, "");
+            socket.send(subTopicPacket);
+            this.wait();
+            subtopics.add(subTopicName);
+        }
+        else if(action.equalsIgnoreCase("GROUP")){
+            String groupName = terminal.read("Enter the name of the new group: ");
+            terminal.println("Enter the name of the new group: " + groupName);
+            DatagramPacket groupPacket = createPacket(CREATE_GROUP, "", dstAddress,
+                    sensorName, "", groupName);
+            socket.send(groupPacket);
+            this.wait();
+            groups.add(groupName);
+        }
+        else terminal.println("Invalid input.");
     }
 
     public synchronized void initialiseSensor() throws IOException, InterruptedException {
         sensorName = terminal.read("Enter sensor name: ");
         DatagramPacket initialisePacket = createPacket(INITIALISE_SENSOR, "", dstAddress,
-                sensorName, "");
+                sensorName, "", "");
         socket.send(initialisePacket);
         this.wait();
     }
-// TODO check if new subtopic exists
-// TODO only add subtopic to hash set if action successful
+
+    public synchronized void addSubtopicToGroup() throws IOException, InterruptedException {
+        String group = terminal.read("Enter group: ");
+        terminal.println("Enter group: " + group);
+        String subtopic = terminal.read("Enter sub-topic: ");
+        terminal.println("Enter sub-topic: " + subtopic);
+        if(groups.contains(group) && subtopics.contains(subtopic)){
+            DatagramPacket packet = createPacket(ADD_SUBTOPIC_TO_GROUP, "", dstAddress, sensorName,
+                    subtopic, group);
+            socket.send(packet);
+            this.wait();
+        }
+        else terminal.println("Invalid input");
+    }
+
+    // TODO check if new subtopic exists
+    // TODO only add subtopic to hash set if action successful
     public synchronized void runner() throws IOException, InterruptedException {
         while(true) {
-            String action = terminal.read("Enter 'CREATE' to create a sub-topic, " +
-                    "or 'PUBLISH' to publish a message: ");
+            String action = terminal.read("Enter 'CREATE' to create a sub-topic or group, " +
+                    "'ADD' to add a sub-topic to a group, or 'PUBLISH' to publish a message: ");
             terminal.println("Enter 'CREATE' to create a sub-topic, " +
                     "or 'PUBLISH' to publish a message: " + action);
             if (action.equalsIgnoreCase("CREATE")) {
-                String subTopicName = terminal.read("Enter the name of the new sub-topic: ");
-                terminal.println("Enter the name of the new sub-topic: " + subTopicName);
-                DatagramPacket subTopicPacket = createPacket(CREATE_SUBTOPIC, "", dstAddress,
-                        sensorName, subTopicName);
-                socket.send(subTopicPacket);
-                this.wait();
-                subTopics.add(subTopicName);
+                create();
             } else if (action.equalsIgnoreCase("PUBLISH")) {
                 publishMessage();
             }
+            else if(action.equalsIgnoreCase("ADD")){
+                addSubtopicToGroup();
+            }
+            else terminal.println("Invalid input.");
         }
     }
 

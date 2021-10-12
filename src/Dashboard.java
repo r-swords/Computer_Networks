@@ -32,12 +32,12 @@ public class Dashboard extends Node{
     public synchronized void sendSubscribeUnsubscribe(byte type, String topic) throws InterruptedException, IOException {
         String[] sub = topic.split(" ");
         if(sub.length == 2) {
-            DatagramPacket newSubscription = createPacket(type, "", dstAddress, sub[0], sub[1]);
+            DatagramPacket newSubscription = createPacket(type, "", dstAddress, sub[0], sub[1], "");
             socket.send(newSubscription);
             this.wait();
         }
         else if(sub.length == 1) {
-            DatagramPacket newSubscription = createPacket(type, "", dstAddress, sub[0], "");
+            DatagramPacket newSubscription = createPacket(type, "", dstAddress, sub[0], "", "");
             socket.send(newSubscription);
             this.wait();
         }
@@ -68,17 +68,14 @@ public class Dashboard extends Node{
 
     @Override
     public synchronized void onReceipt(DatagramPacket packet) {
-        byte[] message = packet.getData();
         notifyAll();
         if(packet.getData()[0] == AUTH){
             if(getMessage(packet).equalsIgnoreCase("action rejected")) terminal.println("Action rejected");
             else terminal.println("Action Accepted");
         }
         else {
-            String printMessage = new String(message).trim();
-            if (!printMessage.equals("fALSE")) {
-                terminal.println(printMessage);
-            } else terminal.println("Topic doesn't exist");
+            String message = getMessage(packet);
+            terminal.println("Message from " + getTopic(packet) + " "+ getTopic(packet) + " " + message);
         }
     }
 }

@@ -5,10 +5,25 @@ import java.util.HashMap;
 public class Topic {
     private ArrayList<InetSocketAddress> allSubscribers;
     private HashMap<String, ArrayList<InetSocketAddress>> subTopics;
+    private HashMap<String, ArrayList<String>> groups;
 
     Topic(){
         subTopics = new HashMap<>();
         allSubscribers = new ArrayList<>();
+        groups = new HashMap<>();
+    }
+
+    public void addGroup(String name){
+        ArrayList<String> newList = new ArrayList<>();
+        groups.put(name, newList);
+    }
+
+    public void addSubtopicToGroup(String subName, String groupName){
+        if(groups.containsKey(groupName) && subTopics.containsKey(subName)) {
+            ArrayList<String> list = groups.get(groupName);
+            list.add(subName);
+            groups.put(groupName, list);
+        }
     }
 
     public void addTopic(String name){
@@ -16,8 +31,11 @@ public class Topic {
         subTopics.put(name, newList);
     }
 
+    public ArrayList<String> getGroupList(String groupName) {
+        return groups.getOrDefault(groupName, null);
+    }
+
     public ArrayList<InetSocketAddress> getSubscriberList(String name){
-        ArrayList<InetSocketAddress> newList = subTopics.getOrDefault(name, null);
         return subTopics.getOrDefault(name, null);
     }
 

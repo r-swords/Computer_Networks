@@ -6,16 +6,16 @@ import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class Broker extends Node {
     Terminal terminal;
     HashMap<String, Topic> topicSubscriptions;
-    HashMap<InetSocketAddress, String> topicNames;
+
     InetSocketAddress dstAddress;
 
     Broker (String dstHost, int dstPort, int srcPort){
         topicSubscriptions = new HashMap<>();
-        topicNames = new HashMap<>();
         try {
             terminal = new Terminal("Broker");
             socket = new DatagramSocket(srcPort);
@@ -37,12 +37,29 @@ public class Broker extends Node {
         String message = getMessage(packet);
         String topicName = getTopic(packet);
         Topic topic = topicSubscriptions.get(topicName);
-        ArrayList<InetSocketAddress> list = (!getSubtopic(packet).equals(""))?
-                topic.getSubscriberList(getSubtopic(packet)): topic.getAll();
-        for (InetSocketAddress inetSocketAddress : list) {
-            DatagramPacket sendPacket = new DatagramPacket(
-                    message.getBytes(StandardCharsets.UTF_8), message.length(), inetSocketAddress);
-            socket.send(sendPacket);
+        if(!getGroup(packet).equals("")){
+            ArrayList<String> subtopicList = topic.getGroupList(getGroup(packet));
+            HashSet<InetSocketAddress> sentAddresses = new HashSet();
+            for(String i : subtopicList){
+                ArrayList<InetSocketAddress> list = topic.getSubscriberList(i);
+                for(InetSocketAddress j : list){
+                    if(!sentAddresses.contains(j)) {
+                        DatagramPacket sendPacket = createPacket(MESSAGE, message, j, topicName, i,
+                                getGroup(packet));
+                        socket.send(sendPacket);
+                        sentAddresses.add(j);
+                    }
+                }
+            }
+        }
+        else {
+            ArrayList<InetSocketAddress> list = (!getSubtopic(packet).equals("")) ?
+                    topic.getSubscriberList(getSubtopic(packet)) : topic.getAll();
+            for (InetSocketAddress i : list) {
+                DatagramPacket sendPacket = createPacket(MESSAGE, message, i, topicName,
+                        getSubtopic(packet), "");
+                socket.send(sendPacket);
+            }
         }
     }
 
@@ -70,15 +87,13 @@ public class Broker extends Node {
         String auth = "action successful";
         if(getAuthorisation("Initialise publisher request from " + sensorName +" (y/n): ")) {
             if (!topicSubscriptions.containsKey(sensorName)) {
-                topicNames.put((InetSocketAddress) packet.getSocketAddress(), sensorName);
                 Topic newTopic = new Topic();
                 topicSubscriptions.put(sensorName, newTopic);
-                sendMessage("true", (InetSocketAddress) packet.getSocketAddress());
-            } else sendMessage("false", (InetSocketAddress) packet.getSocketAddress());
+            } else auth = "action rejected";
         }
         else auth = "action rejected";
         DatagramPacket newPacket = createPacket(AUTH, auth, (InetSocketAddress) packet.getSocketAddress(),
-                getTopic(packet), getSubtopic(packet));
+                getTopic(packet), getSubtopic(packet),"");
         socket.send(newPacket);
     }
 
@@ -104,24 +119,49 @@ public class Broker extends Node {
         }
         else auth = "action rejected";
         DatagramPacket newPacket = createPacket(AUTH, auth, (InetSocketAddress) packet.getSocketAddress(),
-                "", "");
+                "", "","");
         socket.send(newPacket);
     }
 
     public synchronized void createSubtopic(DatagramPacket packet) throws IOException {
         String auth = "action accepted";
-        if(getAuthorisation("Request to create subtopic " + getSubtopic(packet))) {
+        if(getAuthorisation("Request to create subtopic " + getSubtopic(packet) + " for " +
+                getTopic(packet))) {
             String topicName = getTopic(packet);
             Topic topic = topicSubscriptions.get(topicName);
             topic.addTopic(getSubtopic(packet));
         }
         else auth = "action rejected";
         DatagramPacket newPacket = createPacket(AUTH, auth, (InetSocketAddress) packet.getSocketAddress(),
-                "", "");
+                "", "","");
         socket.send(newPacket);
     }
 
+    public synchronized void  addSubtopicToGroup(DatagramPacket packet) throws IOException {
+        String auth = "action accepted";
+        if(getAuthorisation("Request to add " + getSubtopic(packet) + " to " + getGroup(packet)
+                + " in " + getTopic(packet))){
+            Topic topic = topicSubscriptions.get(getTopic(packet));
+            topic.addSubtopicToGroup(getSubtopic(packet), getGroup(packet));
+        }
+        else auth = "action rejected";
+        DatagramPacket newPacket = createPacket(AUTH, auth, (InetSocketAddress) packet.getSocketAddress(),
+                "", "", "");
+        socket.send(newPacket);
+    }
 
+    public synchronized void createGroup(DatagramPacket packet) throws IOException {
+        String auth = "action accepted";
+        if(getAuthorisation("Request to create group '" + getGroup(packet) + "' in " +
+                getTopic(packet))){
+            Topic topic = topicSubscriptions.get(getTopic(packet));
+            topic.addGroup(getGroup(packet));
+        }
+        else auth = "action rejected";
+        DatagramPacket newPacket = createPacket(AUTH, auth, (InetSocketAddress) packet.getSocketAddress(),
+                "", "", "");
+        socket.send(newPacket);
+    }
 
     @Override
     public void onReceipt(DatagramPacket packet) throws IOException {
@@ -140,6 +180,12 @@ public class Broker extends Node {
                 break;
             case UNSUBSCRIBE:
                 subscribe(packet, false);
+                break;
+            case CREATE_GROUP:
+                createGroup(packet);
+                break;
+            case ADD_SUBTOPIC_TO_GROUP:
+                addSubtopicToGroup(packet);
         }
         terminal.println("Received message");
     }
