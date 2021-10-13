@@ -3,13 +3,12 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Locale;
 
 
 public class Sensor extends Node {
 
+    boolean add;
     Terminal terminal;
     InetSocketAddress dstAddress;
     String sensorName;
@@ -24,6 +23,7 @@ public class Sensor extends Node {
             socket= new DatagramSocket(srcPort);
             subtopics = new HashSet<>();
             groups = new HashSet<>();
+            add = false;
             listener.go();
         } catch (SocketException e) {
             e.printStackTrace();
@@ -67,26 +67,34 @@ public class Sensor extends Node {
     }
 
     public synchronized void create() throws IOException, InterruptedException {
+        add = false;
         String action = terminal.read("Enter 'GROUP' to create a group, or 'SUBTOPIC' to create a " +
                 "sub-topic: ");
         terminal.println("Enter 'GROUP' to create a group, or 'SUBTOPIC' to create a sub-topic: " + action);
         if(action.equalsIgnoreCase("SUBTOPIC")) {
             String subTopicName = terminal.read("Enter the name of the new sub-topic: ");
             terminal.println("Enter the name of the new sub-topic: " + subTopicName);
-            DatagramPacket subTopicPacket = createPacket(CREATE_SUBTOPIC, "", dstAddress,
-                    sensorName, subTopicName, "");
-            socket.send(subTopicPacket);
-            this.wait();
-            subtopics.add(subTopicName);
+            if(!subtopics.contains(subTopicName)) {
+                DatagramPacket subTopicPacket = createPacket(CREATE_SUBTOPIC, "", dstAddress,
+                        sensorName, subTopicName, "");
+                socket.send(subTopicPacket);
+                this.wait();
+                if(add) subtopics.add(subTopicName);
+            }
+            else terminal.println("This sub-topic already exists.");
         }
         else if(action.equalsIgnoreCase("GROUP")){
             String groupName = terminal.read("Enter the name of the new group: ");
             terminal.println("Enter the name of the new group: " + groupName);
-            DatagramPacket groupPacket = createPacket(CREATE_GROUP, "", dstAddress,
-                    sensorName, "", groupName);
-            socket.send(groupPacket);
-            this.wait();
-            groups.add(groupName);
+            if(!groups.contains(groupName)) {
+                DatagramPacket groupPacket = createPacket(CREATE_GROUP, "", dstAddress,
+                        sensorName, "", groupName);
+                socket.send(groupPacket);
+                this.wait();
+                if(add) groups.add(groupName);
+            }
+            else terminal.println("This group already exists");
+            add = false;
         }
         else terminal.println("Invalid input.");
     }
@@ -138,12 +146,12 @@ public class Sensor extends Node {
         runner();
     }
 
-
     @Override
     public synchronized void onReceipt(DatagramPacket packet) {
         byte[] message = packet.getData();
         if(message[0] == AUTH) {
             terminal.println(getMessage(packet).toUpperCase());
+            if(getMessage(packet).equalsIgnoreCase("action accepted")) add = true;
         }
         else {
             String printMessage = new String(message).trim();

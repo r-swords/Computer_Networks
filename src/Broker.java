@@ -3,7 +3,6 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -11,7 +10,6 @@ import java.util.HashSet;
 public class Broker extends Node {
     Terminal terminal;
     HashMap<String, Topic> topicSubscriptions;
-
     InetSocketAddress dstAddress;
 
     Broker (String dstHost, int dstPort, int srcPort){
@@ -39,15 +37,19 @@ public class Broker extends Node {
         Topic topic = topicSubscriptions.get(topicName);
         if(!getGroup(packet).equals("")){
             ArrayList<String> subtopicList = topic.getGroupList(getGroup(packet));
-            HashSet<InetSocketAddress> sentAddresses = new HashSet();
-            for(String i : subtopicList){
-                ArrayList<InetSocketAddress> list = topic.getSubscriberList(i);
-                for(InetSocketAddress j : list){
-                    if(!sentAddresses.contains(j)) {
-                        DatagramPacket sendPacket = createPacket(MESSAGE, message, j, topicName, i,
-                                getGroup(packet));
-                        socket.send(sendPacket);
-                        sentAddresses.add(j);
+            if (subtopicList != null) {
+                HashSet<InetSocketAddress> sentAddresses = new HashSet();
+                for (String i : subtopicList) {
+                    ArrayList<InetSocketAddress> list = topic.getSubscriberList(i);
+                    if (list != null) {
+                        for (InetSocketAddress j : list) {
+                            if (!sentAddresses.contains(j)) {
+                                DatagramPacket sendPacket = createPacket(MESSAGE, message, j, topicName, i,
+                                        getGroup(packet));
+                                socket.send(sendPacket);
+                                sentAddresses.add(j);
+                            }
+                        }
                     }
                 }
             }
@@ -55,10 +57,12 @@ public class Broker extends Node {
         else {
             ArrayList<InetSocketAddress> list = (!getSubtopic(packet).equals("")) ?
                     topic.getSubscriberList(getSubtopic(packet)) : topic.getAll();
-            for (InetSocketAddress i : list) {
-                DatagramPacket sendPacket = createPacket(MESSAGE, message, i, topicName,
-                        getSubtopic(packet), "");
-                socket.send(sendPacket);
+            if(list != null) {
+                for (InetSocketAddress i : list) {
+                    DatagramPacket sendPacket = createPacket(MESSAGE, message, i, topicName,
+                            getSubtopic(packet), "");
+                    socket.send(sendPacket);
+                }
             }
         }
     }
@@ -75,11 +79,6 @@ public class Broker extends Node {
             else System.out.println("Invalid input");
         }
         return response.equalsIgnoreCase("Y");
-    }
-
-    public synchronized void sendMessage(String message, InetSocketAddress dstAddress) throws IOException {
-        DatagramPacket sendPacket = new DatagramPacket(message.getBytes(StandardCharsets.UTF_8), message.length(), dstAddress);
-        socket.send(sendPacket);
     }
 
     public synchronized void initialiseTopic(DatagramPacket packet) throws IOException {
@@ -100,7 +99,7 @@ public class Broker extends Node {
     public synchronized  void subscribe(DatagramPacket packet, boolean isSubscription) throws IOException {
         String auth = "action authorised";
         if(getAuthorisation("Subscription request to " + getTopic(packet)+ " "
-                + getSubtopic(packet) + " (y/n): ")) {
+                + getSubtopic(packet) + " (y/n): ") && topicSubscriptions.containsKey(getTopic(packet))) {
            Topic topic = topicSubscriptions.get(getTopic(packet));
            String subtopic = getSubtopic(packet);
            if(!subtopic.equals("")){
@@ -142,7 +141,7 @@ public class Broker extends Node {
         if(getAuthorisation("Request to add " + getSubtopic(packet) + " to " + getGroup(packet)
                 + " in " + getTopic(packet))){
             Topic topic = topicSubscriptions.get(getTopic(packet));
-            topic.addSubtopicToGroup(getSubtopic(packet), getGroup(packet));
+            if(!topic.addSubtopicToGroup(getSubtopic(packet), getGroup(packet))) auth = "action rejected";
         }
         else auth = "action rejected";
         DatagramPacket newPacket = createPacket(AUTH, auth, (InetSocketAddress) packet.getSocketAddress(),

@@ -18,12 +18,14 @@ public class Topic {
         groups.put(name, newList);
     }
 
-    public void addSubtopicToGroup(String subName, String groupName){
+    public boolean addSubtopicToGroup(String subName, String groupName){
         if(groups.containsKey(groupName) && subTopics.containsKey(subName)) {
             ArrayList<String> list = groups.get(groupName);
             list.add(subName);
             groups.put(groupName, list);
+            return true;
         }
+        else return false;
     }
 
     public void addTopic(String name){
