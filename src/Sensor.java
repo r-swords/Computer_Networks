@@ -34,7 +34,7 @@ public class Sensor extends Node {
     public synchronized void publishMessage() throws IOException {
         String message = terminal.read("Enter Message: ");
         String selection = terminal.read("Enter 'SUBTOPIC' to select a sub-topic, 'GROUP' to " +
-                "select a group, or 'ALL' to publish to all sub-topics: ");
+                "select a group\n, or 'ALL' to publish to all sub-topics: ");
         terminal.println("Enter SUBTOPIC' to select a sub-topic, 'GROUP' to select a group, or 'ALL' " +
                 "to publish to all sub-topics: " + selection);
         terminal.println("Enter message: " + message);
@@ -121,14 +121,12 @@ public class Sensor extends Node {
         else terminal.println("Invalid input");
     }
 
-    // TODO check if new subtopic exists
-    // TODO only add subtopic to hash set if action successful
     public synchronized void runner() throws IOException, InterruptedException {
         while(true) {
             String action = terminal.read("Enter 'CREATE' to create a sub-topic or group, " +
-                    "'ADD' to add a sub-topic to a group, or 'PUBLISH' to publish a message: ");
-            terminal.println("Enter 'CREATE' to create a sub-topic, " +
-                    "or 'PUBLISH' to publish a message: " + action);
+                    "'ADD' to add a sub-topic to a group\n, or 'PUBLISH' to publish a message: ");
+            terminal.println("Enter 'CREATE' to create a sub-topic or group, " +
+            "'ADD' to add a sub-topic to a group, or 'PUBLISH' to publish a message: " + action);
             if (action.equalsIgnoreCase("CREATE")) {
                 create();
             } else if (action.equalsIgnoreCase("PUBLISH")) {

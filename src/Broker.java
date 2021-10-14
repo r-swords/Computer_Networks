@@ -38,7 +38,7 @@ public class Broker extends Node {
         if(!getGroup(packet).equals("")){
             ArrayList<String> subtopicList = topic.getGroupList(getGroup(packet));
             if (subtopicList != null) {
-                HashSet<InetSocketAddress> sentAddresses = new HashSet();
+                HashSet<InetSocketAddress> sentAddresses = new HashSet<>();
                 for (String i : subtopicList) {
                     ArrayList<InetSocketAddress> list = topic.getSubscriberList(i);
                     if (list != null) {
@@ -125,7 +125,7 @@ public class Broker extends Node {
     public synchronized void createSubtopic(DatagramPacket packet) throws IOException {
         String auth = "action accepted";
         if(getAuthorisation("Request to create subtopic " + getSubtopic(packet) + " for " +
-                getTopic(packet))) {
+                getTopic(packet) + " (y/n): ")) {
             String topicName = getTopic(packet);
             Topic topic = topicSubscriptions.get(topicName);
             topic.addTopic(getSubtopic(packet));
@@ -139,7 +139,7 @@ public class Broker extends Node {
     public synchronized void  addSubtopicToGroup(DatagramPacket packet) throws IOException {
         String auth = "action accepted";
         if(getAuthorisation("Request to add " + getSubtopic(packet) + " to " + getGroup(packet)
-                + " in " + getTopic(packet))){
+                + " in " + getTopic(packet) + " (y/n): ")){
             Topic topic = topicSubscriptions.get(getTopic(packet));
             if(!topic.addSubtopicToGroup(getSubtopic(packet), getGroup(packet))) auth = "action rejected";
         }
@@ -152,7 +152,7 @@ public class Broker extends Node {
     public synchronized void createGroup(DatagramPacket packet) throws IOException {
         String auth = "action accepted";
         if(getAuthorisation("Request to create group '" + getGroup(packet) + "' in " +
-                getTopic(packet))){
+                getTopic(packet) + " (y/n): ")){
             Topic topic = topicSubscriptions.get(getTopic(packet));
             topic.addGroup(getGroup(packet));
         }
