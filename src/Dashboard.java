@@ -11,7 +11,7 @@ public class Dashboard extends Node{
 
     public static void main(String[] args){
         try{
-            (new Dashboard("localhost", 50001, 50003)).start();
+            (new Dashboard("broker", 50001, Integer.parseInt(args[0]))).start();
         } catch (InterruptedException | IOException e) {
             e.printStackTrace();
         }
@@ -70,12 +70,15 @@ public class Dashboard extends Node{
     public synchronized void onReceipt(DatagramPacket packet) {
         notifyAll();
         if(packet.getData()[0] == AUTH){
-            if(getMessage(packet).equalsIgnoreCase("action rejected")) terminal.println("Action rejected");
-            else terminal.println("Action Accepted");
+            terminal.println(getMessage(packet).toUpperCase());
         }
         else {
             String message = getMessage(packet);
-            terminal.println("Message from " + getTopic(packet) + " "+ getTopic(packet) + " " + message);
+            String printMessage = "Message from " + getTopic(packet);
+            if(!getSubtopic(packet).equals("")) printMessage += " " + getSubtopic(packet);
+            else if(!getGroup(packet).equals("")) printMessage += " " + getGroup(packet);
+            printMessage += ": " + message;
+            terminal.println(printMessage);
         }
     }
 }

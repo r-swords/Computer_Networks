@@ -100,11 +100,13 @@ public class Sensor extends Node {
     }
 
     public synchronized void initialiseSensor() throws IOException, InterruptedException {
-        sensorName = terminal.read("Enter sensor name: ");
-        DatagramPacket initialisePacket = createPacket(INITIALISE_SENSOR, "", dstAddress,
-                sensorName, "", "");
-        socket.send(initialisePacket);
-        this.wait();
+        while(!add) {
+            sensorName = terminal.read("Enter sensor name: ");
+            DatagramPacket initialisePacket = createPacket(INITIALISE_SENSOR, "", dstAddress,
+                    sensorName, "", "");
+            socket.send(initialisePacket);
+            this.wait();
+        }
     }
 
     public synchronized void addSubtopicToGroup() throws IOException, InterruptedException {
@@ -162,7 +164,7 @@ public class Sensor extends Node {
 
     public static void main(String[] args){
         try{
-            (new Sensor("localhost", 50001, 50002)).start();
+            (new Sensor("broker", 50001, Integer.parseInt(args[0]))).start();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
