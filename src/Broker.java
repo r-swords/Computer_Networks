@@ -83,7 +83,7 @@ public class Broker extends Node {
 
     public synchronized void initialiseTopic(DatagramPacket packet) throws IOException {
         String sensorName = getTopic(packet);
-        String auth = "action successful";
+        String auth = "action accepted";
         if(getAuthorisation("Initialise publisher request from " + sensorName +" (y/n): ")) {
             if (!topicSubscriptions.containsKey(sensorName)) {
                 Topic newTopic = new Topic();
@@ -97,11 +97,12 @@ public class Broker extends Node {
     }
 
     public synchronized  void subscribe(DatagramPacket packet, boolean isSubscription) throws IOException {
-        String auth = "action authorised";
+        String auth = "action accepted";
         if(getAuthorisation("Subscription request to " + getTopic(packet)+ " "
                 + getSubtopic(packet) + " (y/n): ") && topicSubscriptions.containsKey(getTopic(packet))) {
            Topic topic = topicSubscriptions.get(getTopic(packet));
            String subtopic = getSubtopic(packet);
+           String group = getGroup(packet);
            if(!subtopic.equals("")){
                if(isSubscription) {
                    if(!topic.addSubscriber(subtopic, (InetSocketAddress) packet.getSocketAddress())) {
@@ -109,6 +110,14 @@ public class Broker extends Node {
                    }
                }
                else topic.removeSubscriber(subtopic, (InetSocketAddress) packet.getSocketAddress());
+           }
+           else if(!group.equals("")){
+               if(isSubscription){
+                   if(!topic.subscribeToGroup(group, (InetSocketAddress) packet.getSocketAddress())){
+                       auth = "action rejected";
+                   }
+               }
+               else topic.unsubGroup(group, (InetSocketAddress) packet.getSocketAddress());
            }
            else{
                if(isSubscription) topic.addSubscriber((InetSocketAddress) packet.getSocketAddress());

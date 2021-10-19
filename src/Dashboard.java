@@ -11,7 +11,7 @@ public class Dashboard extends Node{
 
     public static void main(String[] args){
         try{
-            (new Dashboard("broker", 50001, Integer.parseInt(args[0]))).start();
+            (new Dashboard("localhost", 50001, 50002)).start();
         } catch (InterruptedException | IOException e) {
             e.printStackTrace();
         }
@@ -32,9 +32,21 @@ public class Dashboard extends Node{
     public synchronized void sendSubscribeUnsubscribe(byte type, String topic) throws InterruptedException, IOException {
         String[] sub = topic.split(" ");
         if(sub.length == 2) {
-            DatagramPacket newSubscription = createPacket(type, "", dstAddress, sub[0], sub[1], "");
-            socket.send(newSubscription);
-            this.wait();
+            String subType = terminal.read("Is this a 'group' or 'subtopic': ");
+            terminal.println("Is this a 'group' or 'subtopic': " + subType);
+            if(subType.equalsIgnoreCase("subtopic")) {
+                DatagramPacket newSubscription = createPacket(type, "", dstAddress, sub[0], sub[1], "");
+                socket.send(newSubscription);
+                this.wait();
+            }
+            else if(subType.equalsIgnoreCase("group")){
+                DatagramPacket newSubscription = createPacket(type, "", dstAddress, sub[0], "", sub[1]);
+                socket.send(newSubscription);
+                this.wait();
+            }
+            else{
+                terminal.println("Invalid Input.");
+            }
         }
         else if(sub.length == 1) {
             DatagramPacket newSubscription = createPacket(type, "", dstAddress, sub[0], "", "");
@@ -50,16 +62,16 @@ public class Dashboard extends Node{
             terminal.println("Enter 'SUBSCRIBE' or 'UNSUBSCRIBE': " + action);
             if(action.equalsIgnoreCase("SUBSCRIBE")) {
                 String topic = terminal.read("Subscribe to topic, " +
-                        "subscription requests should be in the form of '<Topic> <Sub-Topic>': ");
+                        "subscription requests should be in the form of '<Topic> <Sub-Topic/Group>': ");
                 terminal.println("Subscribe to topic, subscription requests should be in the form of " +
-                        "'<Topic> <Sub-Topic>' : " + topic);
+                        "'<Topic> <Sub-Topic/Group>' : " + topic);
                 sendSubscribeUnsubscribe(SUBSCRIBE, topic);
             }
             else if(action.equalsIgnoreCase("UNSUBSCRIBE")){
                 String topic =  terminal.read("Unsubscribe to Topic, " +
-                        "unsubscription requests should be in the form of '<Topic> <Sub-Topic>': ");
+                        "unsubscription requests should be in the form of '<Topic> <Sub-Topic/Group>': ");
                 terminal.println("Unsubscribe to topic, " +
-                        "unsubscription requests should be in the form of '<Topic> <Sub-Topic>': " + topic);
+                        "unsubscription requests should be in the form of '<Topic> <Sub-Topic/Group>': " + topic);
                 sendSubscribeUnsubscribe(UNSUBSCRIBE, topic);
             }
             else terminal.println("Invalid input.");

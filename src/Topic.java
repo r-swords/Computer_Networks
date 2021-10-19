@@ -52,6 +52,30 @@ public class Topic {
         else return false;
     }
 
+    public boolean subscribeToGroup(String name, InetSocketAddress newSub){
+        if(groups.containsKey(name)){
+            ArrayList<String> subtopics = groups.get(name);
+            for(String i: subtopics) {
+                ArrayList<InetSocketAddress> subList = getSubscriberList(i);
+                subList.add(newSub);
+                subTopics.put(i, subList);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public void unsubGroup(String name, InetSocketAddress sub){
+        if(groups.containsKey(name)){
+            ArrayList<String> subtopics = groups.get(name);
+            for(String i: subtopics){
+                ArrayList<InetSocketAddress> list = getSubscriberList(i);
+                list.remove(sub);
+                subTopics.put(i, list);
+            }
+        }
+    }
+
     public void addSubscriber(InetSocketAddress newSub) {
         for(ArrayList<InetSocketAddress> i : subTopics.values()){
             if(!i.contains(newSub))i.add(newSub);

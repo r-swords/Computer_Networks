@@ -164,7 +164,7 @@ public class Sensor extends Node {
 
     public static void main(String[] args){
         try{
-            (new Sensor("broker", 50001, Integer.parseInt(args[0]))).start();
+            (new Sensor("localhost", 50001, 50003)).start();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
