@@ -46,6 +46,7 @@ public class Dashboard extends Node{
             }
             else{
                 terminal.println("Invalid Input.");
+                terminal.println("\n---------------\n");
             }
         }
         else if(sub.length == 1) {
@@ -53,7 +54,10 @@ public class Dashboard extends Node{
             socket.send(newSubscription);
             this.wait();
         }
-        else terminal.println("Invalid input.");
+        else{
+            terminal.println("Invalid input.");
+            terminal.println("\n---------------\n");
+        }
     }
 
     public void start() throws InterruptedException, IOException {
@@ -74,7 +78,10 @@ public class Dashboard extends Node{
                         "unsubscription requests should be in the form of '<Topic> <Sub-Topic/Group>': " + topic);
                 sendSubscribeUnsubscribe(UNSUBSCRIBE, topic);
             }
-            else terminal.println("Invalid input.");
+            else {
+                terminal.println("Invalid input.");
+                terminal.println("\n---------------\n");
+            }
         }
     }
 
@@ -92,5 +99,6 @@ public class Dashboard extends Node{
             printMessage += ": " + message;
             terminal.println(printMessage);
         }
+        terminal.println("\n---------------\n");
     }
 }

@@ -32,6 +32,7 @@ public class Broker extends Node {
     }
 
     public synchronized void sendMessage(DatagramPacket packet) throws IOException {
+        terminal.println("Forwarding message to subscribers.");
         String message = getMessage(packet);
         String topicName = getTopic(packet);
         Topic topic = topicSubscriptions.get(topicName);
@@ -84,6 +85,7 @@ public class Broker extends Node {
     public synchronized void initialiseTopic(DatagramPacket packet) throws IOException {
         String sensorName = getTopic(packet);
         String auth = "action accepted";
+        terminal.println("Intialisation of topic attempted.");
         if(getAuthorisation("Initialise publisher request from " + sensorName +" (y/n): ")) {
             if (!topicSubscriptions.containsKey(sensorName)) {
                 Topic newTopic = new Topic();
@@ -98,7 +100,9 @@ public class Broker extends Node {
 
     public synchronized  void subscribe(DatagramPacket packet, boolean isSubscription) throws IOException {
         String auth = "action accepted";
-        if(getAuthorisation("Subscription request to " + getTopic(packet)+ " "
+        String type = (isSubscription)? "Subscription": "Unsubscribe";
+        terminal.println(type + " attempted.");
+        if(getAuthorisation(type + " request to " + getTopic(packet)+ " "
                 + getSubtopic(packet) + " (y/n): ") && topicSubscriptions.containsKey(getTopic(packet))) {
            Topic topic = topicSubscriptions.get(getTopic(packet));
            String subtopic = getSubtopic(packet);
@@ -133,6 +137,7 @@ public class Broker extends Node {
 
     public synchronized void createSubtopic(DatagramPacket packet) throws IOException {
         String auth = "action accepted";
+        terminal.println("Creation of subtopic attempted.");
         if(getAuthorisation("Request to create subtopic " + getSubtopic(packet) + " for " +
                 getTopic(packet) + " (y/n): ")) {
             String topicName = getTopic(packet);
@@ -147,6 +152,7 @@ public class Broker extends Node {
 
     public synchronized void  addSubtopicToGroup(DatagramPacket packet) throws IOException {
         String auth = "action accepted";
+        terminal.println("Addition of subtopic to group attempted.");
         if(getAuthorisation("Request to add " + getSubtopic(packet) + " to " + getGroup(packet)
                 + " in " + getTopic(packet) + " (y/n): ")){
             Topic topic = topicSubscriptions.get(getTopic(packet));
@@ -160,6 +166,7 @@ public class Broker extends Node {
 
     public synchronized void createGroup(DatagramPacket packet) throws IOException {
         String auth = "action accepted";
+        terminal.println("Creation of group attempted.");
         if(getAuthorisation("Request to create group '" + getGroup(packet) + "' in " +
                 getTopic(packet) + " (y/n): ")){
             Topic topic = topicSubscriptions.get(getTopic(packet));
@@ -195,7 +202,7 @@ public class Broker extends Node {
             case ADD_SUBTOPIC_TO_GROUP:
                 addSubtopicToGroup(packet);
         }
-        terminal.println("Received message");
+        terminal.println("\n------------------\n");
     }
 
     public static void main(String[] args){

@@ -64,6 +64,7 @@ public class Sensor extends Node {
             else terminal.println("Group does not exist.");
         }
         else terminal.println("Invalid input");
+        terminal.println("\n---------------\n");
     }
 
     public synchronized void create() throws IOException, InterruptedException {
@@ -97,16 +98,18 @@ public class Sensor extends Node {
             add = false;
         }
         else terminal.println("Invalid input.");
+        terminal.println("\n---------------\n");
     }
 
     public synchronized void initialiseSensor() throws IOException, InterruptedException {
         while(!add) {
-            sensorName = terminal.read("Enter sensor name: ");
+            sensorName = terminal.read("Enter topic name: ");
             DatagramPacket initialisePacket = createPacket(INITIALISE_SENSOR, "", dstAddress,
                     sensorName, "", "");
             socket.send(initialisePacket);
             this.wait();
         }
+        terminal.println("\n---------------\n");
     }
 
     public synchronized void addSubtopicToGroup() throws IOException, InterruptedException {
@@ -121,6 +124,7 @@ public class Sensor extends Node {
             this.wait();
         }
         else terminal.println("Invalid input");
+        terminal.println("\n---------------\n");
     }
 
     public synchronized void runner() throws IOException, InterruptedException {
@@ -137,7 +141,10 @@ public class Sensor extends Node {
             else if(action.equalsIgnoreCase("ADD")){
                 addSubtopicToGroup();
             }
-            else terminal.println("Invalid input.");
+            else{
+                terminal.println("Invalid input.");
+                terminal.println("\n---------------\n");
+            }
         }
     }
 
