@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 public class Broker extends Node {
+    // hello from another folder
     Terminal terminal;
     HashMap<String, Topic> topicSubscriptions;
     InetSocketAddress dstAddress;
@@ -98,7 +99,7 @@ public class Broker extends Node {
         socket.send(newPacket);
     }
 
-    public synchronized  void subscribe(DatagramPacket packet, boolean isSubscription) throws IOException {
+    public synchronized  void subscribeUnsubscribe(DatagramPacket packet, boolean isSubscription) throws IOException {
         String auth = "action accepted";
         String type = (isSubscription)? "Subscription": "Unsubscribe";
         terminal.println(type + " attempted.");
@@ -181,11 +182,11 @@ public class Broker extends Node {
     @Override
     public void onReceipt(DatagramPacket packet) throws IOException {
         switch (packet.getData()[0]){
-            case INITIALISE_SENSOR:
+            case INITIALISE_TOPIC:
                 initialiseTopic(packet);
                 break;
             case SUBSCRIBE:
-                subscribe(packet, true);
+                subscribeUnsubscribe(packet, true);
                 break;
             case MESSAGE:
                 sendMessage(packet);
@@ -194,7 +195,7 @@ public class Broker extends Node {
                 createSubtopic(packet);
                 break;
             case UNSUBSCRIBE:
-                subscribe(packet, false);
+                subscribeUnsubscribe(packet, false);
                 break;
             case CREATE_GROUP:
                 createGroup(packet);

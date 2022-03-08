@@ -8,9 +8,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
 
 public abstract class Node {
-    static final int PACKET_SIZE = 1000;
+    static final int PACKET_SIZE = 6225;
 
-    static final byte INITIALISE_SENSOR = 1;
+    static final byte INITIALISE_TOPIC = 1;
     static final byte MESSAGE = 2;
     static final byte SUBSCRIBE = 3;
     static final byte CREATE_SUBTOPIC = 4;
@@ -30,31 +30,45 @@ public abstract class Node {
         listener.start();
     }
 
+    // Get message from the packet
     public String getMessage(DatagramPacket packet){
         byte[] messageArray = new byte[packet.getData().length];
-        System.arraycopy(packet.getData(), 36, messageArray, 0,
-                packet.getData().length-36);
+        System.arraycopy(packet.getData(), 31, messageArray, 0,
+                packet.getData().length-31);
         return new String(messageArray).trim();
     }
 
+    // Get the topic from the packet.
     public String getTopic(DatagramPacket packet){
         byte[] topicArray = new byte[10];
         System.arraycopy(packet.getData(), 1, topicArray, 0, topicArray.length);
         return new String(topicArray).trim();
     }
 
+    // Get the subtopic from the packet
     public String getSubtopic(DatagramPacket packet) {
         byte[] subtopic = new byte[10];
         System.arraycopy(packet.getData(), 11, subtopic,0, subtopic.length);
         return new String(subtopic).trim();
     }
 
+    // Get the group from the packet
     public String getGroup(DatagramPacket packet) {
         byte[] group = new byte[10];
         System.arraycopy(packet.getData(),21, group, 0, group.length);
         return new String(group).trim();
     }
 
+    /**
+     * Method creates a properly formatted packet.
+     * @param type: Packet identifier
+     * @param message: The message being sent
+     * @param dstAddress: The address of the node that the packet is being sent to
+     * @param topic: The assoicated topic
+     * @param subtopic: The associated subtopic
+     * @param group: The associated group.
+     * @return A DatagramPacket that is ready to be sent.
+     */
     public DatagramPacket createPacket(byte type, String message, InetSocketAddress dstAddress,
                                        String topic, String subtopic, String group){
         if(subtopic.length() <= 10 && topic.length() <= 10 && group.length() <= 10) {
@@ -66,11 +80,8 @@ public abstract class Node {
             System.arraycopy(subTopicBytes,0, data, 11, subTopicBytes.length);
             byte[] groupBytes = group.getBytes();
             System.arraycopy(groupBytes,0, data,21, groupBytes.length);
-            ByteBuffer buffer = ByteBuffer.allocate(5);
-            byte[] bufferArray = buffer.array();
-            System.arraycopy(bufferArray, 0, data, 31, bufferArray.length);
             byte[] messageArray = message.getBytes(StandardCharsets.UTF_8);
-            System.arraycopy(messageArray, 0, data, 36, messageArray.length);
+            System.arraycopy(messageArray, 0, data, 31, messageArray.length);
             return new DatagramPacket(data, data.length, dstAddress);
         }
         return null;
